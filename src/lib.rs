@@ -57,8 +57,9 @@
 //! | ✅   | `x86`, `x86_64`  | avx2    |
 //! | ✅   | `x86`, `x86_64`  | ssse3   |
 //! | ✅   | `x86`, `x86_64`  | sse2    |
-//! | 🚧   | `arm`, `aarch64` | neon    |
-//! |      | `wasm32`         | simd128 |
+//! | ✅   | `aarch64`        | neon    |
+//! | 🚧   | `arm`            | neon    |
+//! | ✅   | `wasm32`         | simd128 |
 //!
 //! **MSRV** `1.36.0`\*\*
 //!
@@ -69,7 +70,7 @@
 //! ## CPU Feature Detection
 //! simd-adler32 supports both runtime and compile time CPU feature detection using the
 //! `std::is_x86_feature_detected` macro when the `Adler32` struct is instantiated with
-//! the `new` fn.  
+//! the `new` fn.
 //!
 //! Without `std` feature enabled simd-adler32 falls back to compile time feature detection
 //! using `target-feature` or `target-cpu` flags supplied to rustc. See [https://rust-lang.github.io/packed_simd/perf-guide/target-feature/rustflags.html](https://rust-lang.github.io/packed_simd/perf-guide/target-feature/rustflags.html)
@@ -80,6 +81,9 @@
 #![cfg_attr(
   all(feature = "nightly", any(target_arch = "x86", target_arch = "x86_64")),
   feature(stdarch_x86_avx512, avx512_target_feature)
+)]
+#![cfg_attr(all(feature = "nightly", target_arch = "arm"),
+  feature(arm_target_feature)
 )]
 
 #[doc(hidden)]
