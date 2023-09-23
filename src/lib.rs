@@ -40,7 +40,7 @@
 //! runtime detection support.
 //! * `nightly`
 //!
-//! Enables nightly features required for avx512 support.
+//! Enables nightly features required for avx512 and `std::simd` support.
 //!
 //! * `const-generics` - Enabled by default
 //!
@@ -58,10 +58,10 @@
 //! | ✅   | `x86`, `x86_64`  | ssse3   |
 //! | ✅   | `x86`, `x86_64`  | sse2    |
 //! | ✅   | `aarch64`        | neon    |
-//! | 🚧   | `arm`            | neon    |
+//! | ✅   | `arm`            | neon    |
 //! | ✅   | `wasm32`         | simd128 |
 //!
-//! **MSRV** `1.36.0`\*\*
+//! **MSRV** `1.89.0`\*\*
 //!
 //! Minimum supported rust version is tested before a new version is published.
 //! [**] Feature `const-generics` needs to disabled to build on rustc versions
@@ -124,6 +124,7 @@
     feature(arm_target_feature, stdarch_arm_feature_detection, stdarch_arm_neon_intrinsics)
 )]
 #![cfg_attr(all(feature = "nightly", target_arch = "aarch64"), feature(stdarch_neon_dotprod))]
+#![cfg_attr(feature = "nightly", feature(portable_simd))]
 
 #[doc(hidden)]
 pub mod hash;

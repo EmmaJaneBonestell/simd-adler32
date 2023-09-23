@@ -16,24 +16,31 @@ mod imp {
     const CHUNK_SIZE: usize = MAX_BLOCKS * BLOCK_SIZE;
 
     // Compile-time proofs that operations cannot overflow
+    #[expect(
+        clippy::integer_division,
+        clippy::integer_division_remainder_used,
+        reason = "Intended."
+    )]
     const _: () = {
         const MAX_A: u32 = MOD - 1;
         assert!(
             (NMAX * (u8::MAX as usize)) < (u32::MAX as usize),
-            "Prove that accumulating NMAX bytes of u8::MAX cannot overflow"
+            "Could not prove that accumulating NMAX bytes of u8::MAX cannot overflow"
         );
         assert!(
             ((MAX_A as usize) * MAX_BLOCKS) < (u32::MAX as usize),
-            "Prove that a * blocks.len() cannot overflow"
+            "Could not prove that `a * blocks.len()` cannot overflow"
         );
         assert!(
-            ((MOD as usize - 1) * NMAX) < (u32::MAX as usize),
-            "Prove b accumulation is safe; b grows at most `a * NMAX` per chunk"
+            ((MAX_A as usize) * NMAX + (u8::MAX as usize) * (NMAX * (NMAX + 1) / 2))
+                < (u32::MAX as usize),
+            "Could not prove b accumulation is safe; b grows by MAX_A * NMAX + weighted sum of \
+             all bytes"
         );
         // Slightly redundant
         assert!(
             (MAX_BLOCKS * BLOCK_SIZE * 255) < (u32::MAX as usize),
-            "Prove that reduce_add result cannot overflow when added to a"
+            "Could not prove that reduce_add result cannot overflow when added to `a`"
         );
     };
 

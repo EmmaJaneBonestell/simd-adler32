@@ -19,40 +19,47 @@ mod imp {
     const CHUNK_SIZE: usize = MAX_BLOCKS * BLOCK_SIZE;
 
     // Compile-time proofs that operations cannot overflow
+    #[expect(
+        clippy::integer_division,
+        clippy::integer_division_remainder_used,
+        reason = "Intended."
+    )]
     const _: () = {
         const MAX_A: u32 = MOD - 1;
         assert!(
             (NMAX * (u8::MAX as usize)) < (u32::MAX as usize),
-            "Prove that accumulating NMAX bytes of u8::MAX cannot overflow"
+            "Could not prove that accumulating NMAX bytes of u8::MAX cannot overflow"
         );
         assert!(
             ((MAX_A as usize) * MAX_BLOCKS) < (u32::MAX as usize),
-            "Prove that a * blocks.len() cannot overflow"
+            "Could not prove that `a * blocks.len()` cannot overflow"
         );
         assert!(
-            ((MOD as usize - 1) * NMAX) < (u32::MAX as usize),
-            "Prove b accumulation is safe; b grows at most `a * NMAX` per chunk"
+            ((MAX_A as usize) * NMAX + (u8::MAX as usize) * (NMAX * (NMAX + 1) / 2))
+                < (u32::MAX as usize),
+            "Could not prove b accumulation is safe; b grows by MAX_A * NMAX + weighted sum of \
+             all bytes"
         );
         // Slightly redundant
         assert!(
             (MAX_BLOCKS * BLOCK_SIZE * 255) < (u32::MAX as usize),
-            "Prove that reduce_add result cannot overflow when added to a"
+            "Could not prove that reduce_add result cannot overflow when added to `a`"
         );
     };
 
     #[cfg(target_arch = "x86")]
     use core::arch::x86::{
         __m128i, __m256i, __m512i, _mm_add_epi32, _mm_cvtsi128_si32, _mm_shuffle_epi32,
+        _mm_unpackhi_epi64, _mm512_add_epi32, _mm512_loadu_si512, _mm512_madd_epi16,
         _mm512_maddubs_epi16, _mm512_sad_epu8, _mm512_set_epi8, _mm512_set_epi32,
         _mm512_set1_epi16, _mm512_setzero_si512, _mm512_slli_epi32,
-        _mm_unpackhi_epi64, _mm512_add_epi32, _mm512_loadu_si512, _mm512_madd_epi16,
     };
     #[cfg(target_arch = "x86_64")]
     use core::arch::x86_64::{
         __m128i, __m256i, __m512i, _mm_add_epi32, _mm_cvtsi128_si32, _mm_shuffle_epi32,
+        _mm_unpackhi_epi64, _mm512_add_epi32, _mm512_loadu_si512, _mm512_madd_epi16,
         _mm512_maddubs_epi16, _mm512_sad_epu8, _mm512_set_epi8, _mm512_set_epi32,
         _mm512_set1_epi16, _mm512_setzero_si512, _mm512_slli_epi32,
-        _mm_unpackhi_epi64, _mm512_add_epi32, _mm512_loadu_si512, _mm512_madd_epi16,
     };
 
     use crate::imp::_MM_SHUFFLE;

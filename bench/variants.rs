@@ -5,7 +5,7 @@ use criterion::{
     measurement::Measurement,
 };
 use rand::{RngCore, rng};
-use simd_adler32::imp::{Adler32Imp, avx2, avx512, scalar, sse2, ssse3, wasm};
+use simd_adler32::imp::{Adler32Imp, avx2, avx512, neon, scalar, sse2, ssse3, stdsimd, wasm};
 
 pub fn bench(c: &mut Criterion) {
     let mut data = [0; 100_000];
@@ -31,6 +31,14 @@ pub fn bench(c: &mut Criterion) {
 
     if let Some(update) = wasm::get_imp() {
         bench_variant(&mut group, "wasm", &data, update);
+    }
+
+    if let Some(update) = neon::get_imp() {
+        bench_variant(&mut group, "neon", &data, update);
+    }
+
+    if let Some(update) = stdsimd::get_imp() {
+        bench_variant(&mut group, "stdsimd", &data, update);
     }
 
     bench_variant(
