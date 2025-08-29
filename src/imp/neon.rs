@@ -13,7 +13,7 @@ pub fn get_imp() -> Option<Adler32Imp> {
   target_feature = "v7"
 ))]
 fn get_imp_inner() -> Option<Adler32Imp> {
-  if std::is_arm_feature_detected!("neon") {
+  if std::arch::is_arm_feature_detected!("neon") {
     Some(imp::update)
   } else {
     None
@@ -23,7 +23,7 @@ fn get_imp_inner() -> Option<Adler32Imp> {
 #[inline]
 #[cfg(all(feature = "std", target_arch = "aarch64"))]
 fn get_imp_inner() -> Option<Adler32Imp> {
-  if std::is_aarch64_feature_detected!("neon") {
+  if std::arch::is_aarch64_feature_detected!("neon") {
     Some(imp::update)
   } else {
     None

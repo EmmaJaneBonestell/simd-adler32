@@ -8,7 +8,7 @@ pub fn get_imp() -> Option<Adler32Imp> {
 #[inline]
 #[cfg(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64")))]
 fn get_imp_inner() -> Option<Adler32Imp> {
-  if std::is_x86_feature_detected!("ssse3") {
+  if std::arch::is_x86_feature_detected!("ssse3") {
     Some(imp::update)
   } else {
     None

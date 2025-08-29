@@ -69,7 +69,7 @@
 //!
 //! ## CPU Feature Detection
 //! simd-adler32 supports both runtime and compile time CPU feature detection using the
-//! `std::is_x86_feature_detected` macro when the `Adler32` struct is instantiated with
+//! `std::arch::is_x86_feature_detected` macro when the `Adler32` struct is instantiated with
 //! the `new` fn.
 //!
 //! Without `std` feature enabled simd-adler32 falls back to compile time feature detection
