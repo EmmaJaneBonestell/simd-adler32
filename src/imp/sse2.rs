@@ -1,13 +1,11 @@
 use super::Adler32Imp;
 
 /// Resolves update implementation if CPU supports sse2 instructions.
+#[must_use]
 pub fn get_imp() -> Option<Adler32Imp> { get_imp_inner() }
 
 #[inline]
-#[cfg(all(
-    feature = "std",
-    any(target_arch = "x86", target_arch = "x86_64")
-))]
+#[cfg(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64")))]
 fn get_imp_inner() -> Option<Adler32Imp> {
     if std::arch::is_x86_feature_detected!("sse2") {
         Some(imp::update)
@@ -19,20 +17,14 @@ fn get_imp_inner() -> Option<Adler32Imp> {
 #[inline]
 #[cfg(all(
     target_feature = "sse2",
-    not(all(
-        feature = "std",
-        any(target_arch = "x86", target_arch = "x86_64")
-    ))
+    not(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64")))
 ))]
 fn get_imp_inner() -> Option<Adler32Imp> { Some(imp::update) }
 
 #[inline]
 #[cfg(all(
     not(target_feature = "sse2"),
-    not(all(
-        feature = "std",
-        any(target_arch = "x86", target_arch = "x86_64")
-    ))
+    not(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64")))
 ))]
 fn get_imp_inner() -> Option<Adler32Imp> { None }
 
@@ -41,6 +33,7 @@ fn get_imp_inner() -> Option<Adler32Imp> { None }
     any(feature = "std", target_feature = "sse2")
 ))]
 mod imp {
+    #[expect(clippy::decimal_literal_representation, reason = "Readability.")]
     const MOD: u32 = 65521;
     const NMAX: usize = 5552;
     const BLOCK_SIZE: usize = 32;
@@ -210,7 +203,7 @@ mod tests {
     #[test]
     fn random() {
         let mut random = [0; 1024 * 1024];
-        rand::thread_rng().fill(&mut random[..]);
+        rand::rng().fill(&mut random[..]);
 
         assert_sum_eq(&random[..1]);
         assert_sum_eq(&random[..100]);

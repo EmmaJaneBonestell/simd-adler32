@@ -7,8 +7,7 @@
 //! - No dependencies
 //! - Support `no_std` (with `default-features = false`)
 //! - Runtime CPU feature detection (when `std` enabled)
-//! - Blazing fast performance on as many targets as possible (currently only
-//!   x86 and x86_64)
+//! - Blazing fast performance on as many targets as possible
 //! - Default to scalar implementation when simd not available
 //!
 //! ## Quick start
@@ -75,164 +74,59 @@
 //! struct is instantiated with the `new` fn.
 //!
 //! Without `std` feature enabled simd-adler32 falls back to compile time
-//! feature detection using `target-feature` or `target-cpu` flags supplied to rustc. See:
-//! [https://rust-lang.github.io/packed_simd/perf-guide/target-feature/rustflags.html](
+//! feature detection using `target-feature` or `target-cpu` flags supplied to
+//! rustc. See: [https://rust-lang.github.io/packed_simd/perf-guide/target-feature/rustflags.html](
 //! https://rust-lang.github.io/packed_simd/perf-guide/target-feature/rustflags.html)
 //! for more information.
+
+#![warn(
+    clippy::all,
+    clippy::cargo,
+    clippy::complexity,
+    clippy::correctness,
+    clippy::nursery,
+    clippy::pedantic,
+    clippy::perf,
+    clippy::style,
+    clippy::suspicious,
+    clippy::restriction
+)]
+#![allow(clippy::as_conversions, reason = "Redundant with specific checks.")]
+#![allow(
+    clippy::blanket_clippy_restriction_lints,
+    reason = "Overly verbose to individually enable."
+)]
+#![allow(clippy::similar_names, reason = "Convention.")]
+#![allow(clippy::implicit_return, reason = "Follow Rust idiomatic returns.")]
+#![allow(clippy::inline_always, reason = "Intended.")]
+#![allow(clippy::min_ident_chars, reason = "Convention.")]
+#![allow(clippy::missing_inline_in_public_items, reason = "Not beneficial.")]
+#![allow(clippy::mod_module_files, reason = "Maintain existing layout.")]
+#![allow(clippy::multiple_unsafe_ops_per_block, reason = "Readability.")]
+#![allow(clippy::undocumented_unsafe_blocks, reason = "Intrinsics.")]
+#![allow(
+    clippy::single_call_fn,
+    reason = "Single use functions are used for clarity and composability."
+)]
+#![allow(clippy::separated_literal_suffix, reason = "Desired style.")]
+#![allow(clippy::single_char_lifetime_names, reason = "Convention.")]
 
 //! Feature detection tries to use the fastest supported feature first.
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(
-    all(
-        feature = "nightly",
-        any(target_arch = "x86", target_arch = "x86_64")
-    ),
+    all(feature = "nightly", any(target_arch = "x86", target_arch = "x86_64")),
     feature(stdarch_x86_avx512, avx512_target_feature)
 )]
 #![cfg_attr(
     all(feature = "nightly", target_arch = "arm"),
-    feature(arm_target_feature)
+    feature(arm_target_feature, stdarch_arm_feature_detection, stdarch_arm_neon_intrinsics)
 )]
-#![cfg_attr(
-    all(feature = "nightly", target_arch = "aarch64"),
-    feature(stdarch_neon_dotprod)
-)]
+#![cfg_attr(all(feature = "nightly", target_arch = "aarch64"), feature(stdarch_neon_dotprod))]
 
 #[doc(hidden)]
 pub mod hash;
 #[doc(hidden)]
 pub mod imp;
-
-/// An adler32 hash generator type.
-#[derive(Clone)]
-pub struct Adler32 {
-    a: u16,
-    b: u16,
-}
-
-impl Adler32 {
-    /// Constructs a new `Adler32`.
-    ///
-    /// Potential overhead here due to runtime feature detection although in
-    /// testing on 100k and 10k random byte arrays it was not really
-    /// noticeable.
-    ///
-    /// # Examples
-    /// ```rust
-    /// use simd_adler32::Adler32;
-    ///
-    /// let mut adler = Adler32::new();
-    /// ```
-    pub fn new() -> Self { Default::default() }
-
-    /// Constructs a new `Adler32` using existing checksum.
-    ///
-    /// # Examples
-    /// ```rust
-    /// use simd_adler32::Adler32;
-    ///
-    /// let mut adler = Adler32::from_checksum(0xDEADBEAF);
-    /// ```
-    pub fn from_checksum(checksum: u32) -> Self {
-        Self {
-            a: checksum as u16,
-            b: (checksum >> 16) as u16,
-        }
-    }
-
-    /// Computes hash for supplied data and stores results in internal state.
-    pub fn write(&mut self, data: &[u8]) {
-        let (a, b) = imp::call(self.a, self.b, data);
-
-        self.a = a;
-        self.b = b;
-    }
-
-    /// Returns the hash value for the values written so far.
-    ///
-    /// Despite its name, the method does not reset the hasher’s internal state.
-    /// Additional writes will continue from the current value. If you need
-    /// to start a fresh hash value, you will have to use `reset`.
-    pub fn finish(&self) -> u32 { (u32::from(self.b) << 16) | u32::from(self.a) }
-
-    /// Resets the internal state.
-    pub fn reset(&mut self) {
-        self.a = 1;
-        self.b = 0;
-    }
-}
-
-/// Compute Adler-32 hash on `Adler32Hash` type.
-///
-/// # Arguments
-/// * `hash` - A Adler-32 hash-able type.
-///
-/// # Examples
-/// ```rust
-/// use simd_adler32::adler32;
-///
-/// let hash = adler32(b"Adler-32");
-/// println!("{}", hash); // 800813569
-/// ```
-pub fn adler32<H: Adler32Hash>(hash: &H) -> u32 { hash.hash() }
-
-/// A Adler-32 hash-able type.
-pub trait Adler32Hash {
-    /// Feeds this value into `Adler32`.
-    fn hash(&self) -> u32;
-}
-
-impl Default for Adler32 {
-    fn default() -> Self { Self { a: 1, b: 0 } }
-}
-
-#[cfg(feature = "std")]
-pub mod read {
-    //! Reader-based hashing.
-    //!
-    //! # Example
-    //! ```rust
-    //! use std::io::Cursor;
-    //!
-    //! use simd_adler32::read::adler32;
-    //!
-    //! let mut reader = Cursor::new(b"Hello there");
-    //! let hash = adler32(&mut reader).unwrap();
-    //!
-    //! println!("{}", hash) // 800813569
-    //! ```
-    use std::io::{Read, Result};
-
-    use crate::Adler32;
-
-    /// Compute Adler-32 hash on reader until EOF.
-    ///
-    /// # Example
-    /// ```rust
-    /// use std::io::Cursor;
-    ///
-    /// use simd_adler32::read::adler32;
-    ///
-    /// let mut reader = Cursor::new(b"Hello there");
-    /// let hash = adler32(&mut reader).unwrap();
-    ///
-    /// println!("{}", hash) // 800813569
-    /// ```
-    pub fn adler32<R: Read>(reader: &mut R) -> Result<u32> {
-        let mut hash = Adler32::new();
-        let mut buf = [0; 4096];
-
-        loop {
-            match reader.read(&mut buf) {
-                | Ok(0) => return Ok(hash.finish()),
-                | Ok(n) => {
-                    hash.write(&buf[..n]);
-                },
-                | Err(err) => return Err(err),
-            }
-        }
-    }
-}
 
 #[cfg(feature = "std")]
 pub mod bufread {
@@ -258,6 +152,12 @@ pub mod bufread {
     use crate::Adler32;
 
     /// Compute Adler-32 hash on buf reader until EOF.
+    ///
+    /// # Errors
+    ///
+    /// Returns a non-recoverable IO error; that is, not:
+    /// - `ErrorKind::Interrupted`
+    /// - `ErrorKind::UnexpectedEof`
     ///
     /// # Example
     /// ```rust
@@ -295,6 +195,151 @@ pub mod bufread {
         }
     }
 }
+
+#[cfg(feature = "std")]
+pub mod read {
+    //! Reader-based hashing.
+    //!
+    //! # Example
+    //! ```rust
+    //! use std::io::Cursor;
+    //!
+    //! use simd_adler32::read::adler32;
+    //!
+    //! let mut reader = Cursor::new(b"Hello there");
+    //! let hash = adler32(&mut reader).unwrap();
+    //!
+    //! println!("{}", hash) // 800813569
+    //! ```
+    use std::io::{Read, Result};
+
+    use crate::Adler32;
+
+    /// Compute Adler-32 hash on reader until EOF.
+    ///
+    /// # Errors
+    ///
+    /// Returns an IO error which may be recoverable.
+    ///
+    /// # Example
+    /// ```rust
+    /// use std::io::Cursor;
+    ///
+    /// use simd_adler32::read::adler32;
+    ///
+    /// let mut reader = Cursor::new(b"Hello there");
+    /// let hash = adler32(&mut reader).unwrap();
+    ///
+    /// println!("{}", hash) // 800813569
+    /// ```
+    pub fn adler32<R: Read>(reader: &mut R) -> Result<u32> {
+        let mut hash = Adler32::new();
+        let mut buf = [0; 4096];
+
+        loop {
+            match reader.read(&mut buf) {
+                | Ok(0) => return Ok(hash.finish()),
+                | Ok(n) => {
+                    #[expect(
+                        clippy::indexing_slicing,
+                        reason = "A panic would mean the Read trait has been implemented \
+                                  incorrectly."
+                    )]
+                    hash.write(&buf[..n]);
+                },
+                | Err(err) => return Err(err),
+            }
+        }
+    }
+}
+
+/// An adler32 hash generator type.
+#[derive(Clone)]
+pub struct Adler32 {
+    /// The low-order 16 bits of the sum.
+    a: u16,
+    /// The high-order 16 bits of the sum.
+    b: u16,
+}
+
+impl Adler32 {
+    /// Return the hash value for the values written so far.
+    ///
+    /// Despite its name, the method does not reset the hasher’s internal state.
+    /// Additional writes will continue from the current value. If you need
+    /// to start a fresh hash value, you will have to use `reset`.
+    #[must_use]
+    pub fn finish(&self) -> u32 { (u32::from(self.b) << 16) | u32::from(self.a) }
+
+    /// Construct a new `Adler32` using existing checksum.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use simd_adler32::Adler32;
+    ///
+    /// let mut adler = Adler32::from_checksum(0xDEADBEAF);
+    /// ```
+    #[must_use]
+    #[expect(clippy::cast_possible_truncation, reason = "Intended.")]
+    pub const fn from_checksum(checksum: u32) -> Self {
+        Self {
+            a: checksum as u16,
+            b: (checksum >> 16) as u16,
+        }
+    }
+
+    /// Construct a new `Adler32`.
+    ///
+    /// Potential overhead here due to runtime feature detection; however,
+    /// testing on 100k and 10k random byte arrays shows little-to-no impact.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use simd_adler32::Adler32;
+    ///
+    /// let mut adler = Adler32::new();
+    /// ```
+    #[must_use]
+    pub fn new() -> Self { Self::default() }
+
+    /// Reset the internal state.
+    pub const fn reset(&mut self) {
+        self.a = 1;
+        self.b = 0;
+    }
+
+    /// Computes hash for supplied data and store results in an internal state.
+    pub fn write(&mut self, data: &[u8]) {
+        let (a, b) = imp::call(self.a, self.b, data);
+
+        self.a = a;
+        self.b = b;
+    }
+}
+
+/// An Adler-32 hash-able type.
+pub trait Adler32Hash {
+    /// Feeds this value into `Adler32`.
+    fn hash(&self) -> u32;
+}
+
+impl Default for Adler32 {
+    fn default() -> Self { Self { a: 1, b: 0 } }
+}
+
+/// Compute Adler-32 hash on `Adler32Hash` type.
+///
+/// # Arguments
+/// * `hash` - A Adler-32 hash-able type.
+///
+/// # Examples
+/// ```rust
+/// use simd_adler32::adler32;
+///
+/// let hash = adler32(b"Adler-32");
+/// println!("{}", hash); // 800813569
+/// ```
+pub fn adler32<H: Adler32Hash>(hash: &H) -> u32 { hash.hash() }
 
 #[cfg(test)]
 mod tests {

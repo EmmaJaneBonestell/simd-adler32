@@ -1,14 +1,16 @@
+use std::hint::black_box;
+
 use criterion::{
-    BenchmarkGroup, Criterion, Throughput, black_box, criterion_group, criterion_main,
+    BenchmarkGroup, Criterion, Throughput, criterion_group, criterion_main,
     measurement::Measurement,
 };
-use rand::{RngCore, thread_rng};
+use rand::{RngCore, rng};
 
 pub fn bench(c: &mut Criterion) {
     let mut data = vec![0; 100_000];
     let mut group = c.benchmark_group("alts");
 
-    thread_rng().fill_bytes(&mut data[..]);
+    rng().fill_bytes(&mut data[..]);
 
     bench_alt(&mut group, "adler", &data, |data| {
         let mut adler = adler::Adler32::new();
@@ -37,7 +39,7 @@ pub fn bench(c: &mut Criterion) {
     );
 }
 
-fn bench_alt<M, F>(g: &mut BenchmarkGroup<M>, name: &str, data: &[u8], mut imp: F)
+fn bench_alt<M, F>(g: &mut BenchmarkGroup<'_, M>, name: &str, data: &[u8], mut imp: F)
 where
     M: Measurement,
     F: FnMut(&[u8]) -> u32,

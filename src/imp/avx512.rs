@@ -2,14 +2,11 @@ use super::Adler32Imp;
 
 /// Resolves update implementation if CPU supports avx512f and avx512bw
 /// instructions.
+#[must_use]
 pub fn get_imp() -> Option<Adler32Imp> { get_imp_inner() }
 
 #[inline]
-#[cfg(all(
-    feature = "std",
-    feature = "nightly",
-    any(target_arch = "x86", target_arch = "x86_64")
-))]
+#[cfg(all(feature = "std", feature = "nightly", any(target_arch = "x86", target_arch = "x86_64")))]
 fn get_imp_inner() -> Option<Adler32Imp> {
     let has_avx512f = std::arch::is_x86_feature_detected!("avx512f");
     let has_avx512bw = std::arch::is_x86_feature_detected!("avx512bw");
@@ -24,24 +21,14 @@ fn get_imp_inner() -> Option<Adler32Imp> {
 #[inline]
 #[cfg(all(
     feature = "nightly",
-    all(
-        target_feature = "avx512f",
-        target_feature = "avx512bw"
-    ),
-    not(all(
-        feature = "std",
-        any(target_arch = "x86", target_arch = "x86_64")
-    ))
+    all(target_feature = "avx512f", target_feature = "avx512bw"),
+    not(all(feature = "std", any(target_arch = "x86", target_arch = "x86_64")))
 ))]
 fn get_imp_inner() -> Option<Adler32Imp> { Some(imp::update) }
 
 #[inline]
 #[cfg(all(
-    not(all(
-        feature = "nightly",
-        target_feature = "avx512f",
-        target_feature = "avx512bw"
-    )),
+    not(all(feature = "nightly", target_feature = "avx512f", target_feature = "avx512bw")),
     not(all(
         feature = "std",
         feature = "nightly",
@@ -53,15 +40,10 @@ fn get_imp_inner() -> Option<Adler32Imp> { None }
 #[cfg(all(
     feature = "nightly",
     any(target_arch = "x86", target_arch = "x86_64"),
-    any(
-        feature = "std",
-        all(
-            target_feature = "avx512f",
-            target_feature = "avx512bw"
-        )
-    )
+    any(feature = "std", all(target_feature = "avx512f", target_feature = "avx512bw"))
 ))]
 mod imp {
+    #[expect(clippy::decimal_literal_representation, reason = "Readability.")]
     const MOD: u32 = 65521;
     const NMAX: usize = 5552;
     const BLOCK_SIZE: usize = 64;
@@ -226,7 +208,7 @@ mod tests {
     #[test]
     fn random() {
         let mut random = [0; 1024 * 1024];
-        rand::thread_rng().fill(&mut random[..]);
+        rand::rng().fill(&mut random[..]);
 
         assert_sum_eq(&random[..1]);
         assert_sum_eq(&random[..100]);

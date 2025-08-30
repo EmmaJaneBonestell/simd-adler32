@@ -1,6 +1,7 @@
 use super::Adler32Imp;
 
 /// Resolves update implementation if CPU supports simd128 instructions.
+#[must_use]
 pub fn get_imp() -> Option<Adler32Imp> { get_imp_inner() }
 
 #[inline]
@@ -13,6 +14,7 @@ fn get_imp_inner() -> Option<Adler32Imp> { None }
 
 #[cfg(target_feature = "simd128")]
 mod imp {
+    #[expect(clippy::decimal_literal_representation, reason = "Readability.")]
     const MOD: u32 = 65521;
     const NMAX: usize = 5552;
     const BLOCK_SIZE: usize = 32;
@@ -145,7 +147,7 @@ mod imp {
     #[inline(always)]
     fn u32x4_horizontal_add(v: v128) -> u32 {
         let arr: [u32; 4] = unsafe { core::mem::transmute(v) };
-        let mut sum = 0u32;
+        let mut sum = 0_u32;
         for val in arr {
             sum = sum.wrapping_add(val);
         }
@@ -194,7 +196,7 @@ mod tests {
     #[test]
     fn random() {
         let mut random = [0; 512 * 1024];
-        rand::thread_rng().fill(&mut random[..]);
+        rand::rng().fill(&mut random[..]);
 
         assert_sum_eq(&random[..1]);
         assert_sum_eq(&random[..100]);

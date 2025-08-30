@@ -1,15 +1,17 @@
+use std::hint::black_box;
+
 use criterion::{
-    BenchmarkGroup, Criterion, Throughput, black_box, criterion_group, criterion_main,
+    BenchmarkGroup, Criterion, Throughput, criterion_group, criterion_main,
     measurement::Measurement,
 };
-use rand::{RngCore, thread_rng};
+use rand::{RngCore, rng};
 use simd_adler32::imp::{Adler32Imp, avx2, avx512, scalar, sse2, ssse3, wasm};
 
 pub fn bench(c: &mut Criterion) {
     let mut data = [0; 100_000];
     let mut group = c.benchmark_group("variants");
 
-    thread_rng().fill_bytes(&mut data[..]);
+    rng().fill_bytes(&mut data[..]);
 
     if let Some(update) = avx512::get_imp() {
         bench_variant(&mut group, "avx512", &data, update);
@@ -39,7 +41,7 @@ pub fn bench(c: &mut Criterion) {
     );
 }
 
-fn bench_variant<M>(g: &mut BenchmarkGroup<M>, name: &str, data: &[u8], imp: Adler32Imp)
+fn bench_variant<M>(g: &mut BenchmarkGroup<'_, M>, name: &str, data: &[u8], imp: Adler32Imp)
 where
     M: Measurement,
 {

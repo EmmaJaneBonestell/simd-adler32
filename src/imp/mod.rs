@@ -1,5 +1,3 @@
-use core::sync::atomic::{AtomicPtr, Ordering};
-
 pub mod avx2;
 pub mod avx512;
 pub mod neon;
@@ -8,14 +6,32 @@ pub mod sse2;
 pub mod ssse3;
 pub mod wasm;
 
-type Adler32Imp = fn(u16, u16, &[u8]) -> (u16, u16);
+use core::{
+    mem,
+    sync::atomic::{AtomicPtr, Ordering},
+};
+
+// This either contains the resolver function (initially), or the
+// already-resolved `Adler32Imp` (after the first call).
+static IMP: AtomicPtr<()> = AtomicPtr::new(adler_imp_to_raw_pointer(
+    resolve_and_call,
+));
+
+#[expect(clippy::module_name_repetitions, reason = "Maintaining API.")]
+pub type Adler32Imp = fn(u16, u16, &[u8]) -> (u16, u16);
 
 #[inline]
-#[allow(non_snake_case)]
+#[expect(non_snake_case, reason = "Matching existing name.")]
+#[expect(clippy::cast_possible_wrap, reason = "Does not happen on valid inputs; asserted for.")]
+#[must_use]
 pub const fn _MM_SHUFFLE(z: u32, y: u32, x: u32, w: u32) -> i32 {
+    assert!(
+        z <= 3 && y <= 3 && x <= 3 && w <= 3,
+        "Inputs must be between [0, 3]."
+    );
+
     ((z << 6) | (y << 4) | (x << 2) | w) as i32
 }
-
 fn get_imp() -> Adler32Imp {
     avx512::get_imp()
         .or_else(avx2::get_imp)
@@ -27,17 +43,9 @@ fn get_imp() -> Adler32Imp {
 }
 
 #[inline]
-const fn adler_imp_to_raw_pointer(imp: Adler32Imp) -> *mut () {
-    // Safety: Equivalent to `imp as usize as *mut ()`, but avoids pointer-to-int
-    // casts which are lossy in terms of provenance.
-    unsafe { core::mem::transmute(imp) }
-}
+#[expect(clippy::fn_to_numeric_cast_any, reason = "Intended. behavior.")]
+const fn adler_imp_to_raw_pointer(imp: Adler32Imp) -> *mut () { imp as *mut () }
 
-// This either contains the resolver function (initially), or the
-// already-resolved `Adler32Imp` (after the first call).
-static IMP: AtomicPtr<()> = AtomicPtr::new(adler_imp_to_raw_pointer(
-    resolve_and_call,
-));
 // Initial value of `IMP`. This resolves the implementation to use, stores it in
 // IMP (so that all calls after the first skip resolving), and then forwards the
 // arguments it gets to the implementation it resolved.
@@ -54,8 +62,7 @@ fn resolve_and_call(a: u16, b: u16, data: &[u8]) -> (u16, u16) {
 /// the first time through).
 #[inline]
 pub fn call(a: u16, b: u16, data: &[u8]) -> (u16, u16) {
-    let imp = IMP.load(Ordering::Relaxed);
     // Safety: `IMP` only ever contains valid `Adler32Imp`s.
-    let imp: Adler32Imp = unsafe { core::mem::transmute(imp) };
+    let imp: Adler32Imp = unsafe { mem::transmute(IMP.load(Ordering::Relaxed)) };
     imp(a, b, data)
 }

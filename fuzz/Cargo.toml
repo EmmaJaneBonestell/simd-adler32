@@ -3,7 +3,7 @@
 name = "simd-adler32-fuzz"
 version = "0.0.0"
 publish = false
-edition = "2018"
+edition = "2024"
 
 [package.metadata]
 cargo-fuzz = true
@@ -13,6 +13,8 @@ libfuzzer-sys = "*"
 
 [dependencies.simd-adler32]
 path = ".."
+version = "*"
+features = ["nightly"]
 
 # Prevent this from interfering with workspaces
 [workspace]
@@ -39,5 +41,23 @@ test = false
 [[bin]]
 name = "ssse3"
 path = "targets/ssse3.rs"
+doc = false
+test = false
+
+[[bin]]
+name = "neon"
+path = "targets/neon.rs"
+doc = false
+test = false
+
+[[bin]]
+name = "wasm"
+path = "targets/wasm.rs"
+doc = false
+test = false
+
+[[bin]]
+name = "scalar"
+path = "targets/scalar.rs"
 doc = false
 test = false
