@@ -30,8 +30,8 @@ mod imp {
     #[inline]
     #[target_feature(enable = "simd128")]
     fn update_imp(a: u16, b: u16, data: &[u8]) -> (u16, u16) {
-        let mut a = a as u32;
-        let mut b = b as u32;
+        let mut a = u32::from(a);
+        let mut b = u32::from(b);
 
         let chunks = data.chunks_exact(CHUNK_SIZE);
         let remainder = chunks.remainder();
@@ -171,7 +171,7 @@ mod imp {
 
 #[cfg(test)]
 mod tests {
-    use rand::Rng;
+    use rand::Rng as _;
 
     #[test]
     fn zeroes() {
@@ -204,14 +204,14 @@ mod tests {
         assert_sum_eq(&random[..512 * 1024]);
     }
 
-    /// Example calculation from https://en.wikipedia.org/wiki/Adler-32.
+    /// Example calculation from <https://en.wikipedia.org/wiki/Adler-32>.
     #[test]
     fn wiki() { assert_sum_eq(b"Wikipedia"); }
 
     fn assert_sum_eq(data: &[u8]) {
         if let Some(update) = super::get_imp() {
             let (a, b) = update(1, 0, data);
-            let left = u32::from(b) << 16 | u32::from(a);
+            let left = (u32::from(b) << 16_i32) | u32::from(a);
             let right = adler::adler32_slice(data);
 
             assert_eq!(left, right, "len({})", data.len());

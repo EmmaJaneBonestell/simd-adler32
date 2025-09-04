@@ -9,6 +9,7 @@ categories = ["algorithms", "no-std"]
 repository = "https://github.com/mcountryman/simd-adler32"
 description = "A SIMD-accelerated Adler-32 hash algorithm implementation."
 exclude = ["bench"]
+rust-version = "1.89"
 
 [profile.release]
 debug = true

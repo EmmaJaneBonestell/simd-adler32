@@ -42,6 +42,11 @@ mod imp {
             ((MOD as usize - 1) * NMAX) < (u32::MAX as usize),
             "Prove b accumulation is safe; b grows at most `a * NMAX` per chunk"
         );
+        // Slightly redundant
+        assert!(
+            (MAX_BLOCKS * BLOCK_SIZE * 255) < (u32::MAX as usize),
+            "Prove that reduce_add result cannot overflow when added to a"
+        );
     };
 
     pub fn update(a: u16, b: u16, data: &[u8]) -> (u16, u16) { unsafe { update_imp(a, b, data) } }
@@ -351,7 +356,7 @@ mod imp {
 
     #[cfg(target_arch = "aarch64")]
     #[inline(always)]
-    unsafe fn get_weight_0() -> uint8x16_t {
+    const unsafe fn get_weight_0() -> uint8x16_t {
         unsafe {
             use core::mem::transmute;
 
@@ -363,7 +368,7 @@ mod imp {
 
     #[cfg(target_arch = "aarch64")]
     #[inline(always)]
-    unsafe fn get_weight_1() -> uint8x16_t {
+    const unsafe fn get_weight_1() -> uint8x16_t {
         unsafe {
             use core::mem::transmute;
 
@@ -375,7 +380,7 @@ mod imp {
 
     #[cfg(target_arch = "aarch64")]
     #[inline(always)]
-    unsafe fn get_weight_2() -> uint8x16_t {
+    const unsafe fn get_weight_2() -> uint8x16_t {
         unsafe {
             use core::mem::transmute;
 
@@ -387,7 +392,7 @@ mod imp {
 
     #[cfg(target_arch = "aarch64")]
     #[inline(always)]
-    unsafe fn get_weight_3() -> uint8x16_t {
+    const unsafe fn get_weight_3() -> uint8x16_t {
         unsafe {
             use core::mem::transmute;
             transmute([16_u8, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1])
@@ -396,7 +401,7 @@ mod imp {
 
     #[cfg(target_arch = "aarch64")]
     #[inline(always)]
-    unsafe fn get_weight_0_128() -> uint8x16_t {
+    const unsafe fn get_weight_0_128() -> uint8x16_t {
         unsafe {
             use core::mem::transmute;
 
@@ -408,7 +413,7 @@ mod imp {
 
     #[cfg(target_arch = "aarch64")]
     #[inline(always)]
-    unsafe fn get_weight_1_128() -> uint8x16_t {
+    const unsafe fn get_weight_1_128() -> uint8x16_t {
         unsafe {
             use core::mem::transmute;
 
@@ -420,7 +425,7 @@ mod imp {
 
     #[cfg(target_arch = "aarch64")]
     #[inline(always)]
-    unsafe fn get_weight_2_128() -> uint8x16_t {
+    const unsafe fn get_weight_2_128() -> uint8x16_t {
         unsafe {
             use core::mem::transmute;
 
@@ -432,7 +437,7 @@ mod imp {
 
     #[cfg(target_arch = "aarch64")]
     #[inline(always)]
-    unsafe fn get_weight_3_128() -> uint8x16_t {
+    const unsafe fn get_weight_3_128() -> uint8x16_t {
         unsafe {
             use core::mem::transmute;
 
@@ -444,7 +449,7 @@ mod imp {
 
     #[cfg(target_arch = "aarch64")]
     #[inline(always)]
-    unsafe fn get_weight_4_128() -> uint8x16_t {
+    const unsafe fn get_weight_4_128() -> uint8x16_t {
         unsafe {
             use core::mem::transmute;
 
@@ -456,7 +461,7 @@ mod imp {
 
     #[cfg(target_arch = "aarch64")]
     #[inline(always)]
-    unsafe fn get_weight_5_128() -> uint8x16_t {
+    const unsafe fn get_weight_5_128() -> uint8x16_t {
         unsafe {
             use core::mem::transmute;
 
@@ -468,7 +473,7 @@ mod imp {
 
     #[cfg(target_arch = "aarch64")]
     #[inline(always)]
-    unsafe fn get_weight_6_128() -> uint8x16_t {
+    const unsafe fn get_weight_6_128() -> uint8x16_t {
         unsafe {
             use core::mem::transmute;
 
@@ -480,7 +485,7 @@ mod imp {
 
     #[cfg(target_arch = "aarch64")]
     #[inline(always)]
-    unsafe fn get_weight_7_128() -> uint8x16_t {
+    const unsafe fn get_weight_7_128() -> uint8x16_t {
         unsafe {
             use core::mem::transmute;
             transmute([16_u8, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1])
@@ -489,7 +494,7 @@ mod imp {
 
     #[cfg(target_arch = "arm")]
     #[inline(always)]
-    unsafe fn get_weight_lo_arm() -> uint8x16_t {
+    const unsafe fn get_weight_lo_arm() -> uint8x16_t {
         unsafe {
             use core::mem::transmute;
 
@@ -501,7 +506,7 @@ mod imp {
 
     #[cfg(target_arch = "arm")]
     #[inline(always)]
-    unsafe fn get_weight_hi_arm() -> uint8x16_t {
+    const unsafe fn get_weight_hi_arm() -> uint8x16_t {
         unsafe {
             use core::mem::transmute;
 
@@ -554,7 +559,7 @@ fn get_imp_inner() -> Option<Adler32Imp> { None }
 
 #[cfg(test)]
 mod tests {
-    use rand::Rng;
+    use rand::Rng as _;
 
     #[test]
     fn zeroes() {
@@ -587,14 +592,14 @@ mod tests {
         assert_sum_eq(&random[..1024 * 1024]);
     }
 
-    /// Example calculation from https://en.wikipedia.org/wiki/Adler-32.
+    /// Example calculation from <https://en.wikipedia.org/wiki/Adler-32>.
     #[test]
     fn wiki() { assert_sum_eq(b"Wikipedia"); }
 
     fn assert_sum_eq(data: &[u8]) {
         if let Some(update) = super::get_imp() {
             let (a, b) = update(1, 0, data);
-            let left = u32::from(b) << 16 | u32::from(a);
+            let left = (u32::from(b) << 16_i32) | u32::from(a);
             let right = adler::adler32_slice(data);
 
             assert_eq!(left, right, "len({})", data.len());

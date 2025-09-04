@@ -87,9 +87,9 @@
     clippy::nursery,
     clippy::pedantic,
     clippy::perf,
+    clippy::restriction,
     clippy::style,
-    clippy::suspicious,
-    clippy::restriction
+    clippy::suspicious
 )]
 #![allow(clippy::as_conversions, reason = "Redundant with specific checks.")]
 #![allow(
@@ -99,6 +99,8 @@
 #![allow(clippy::similar_names, reason = "Convention.")]
 #![allow(clippy::implicit_return, reason = "Follow Rust idiomatic returns.")]
 #![allow(clippy::inline_always, reason = "Intended.")]
+#![allow(clippy::large_stack_arrays, reason = "Used only in tests.")]
+#![allow(clippy::large_stack_frames, reason = "Used only in tests.")]
 #![allow(clippy::min_ident_chars, reason = "Convention.")]
 #![allow(clippy::missing_inline_in_public_items, reason = "Not beneficial.")]
 #![allow(clippy::mod_module_files, reason = "Maintain existing layout.")]
@@ -115,7 +117,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![cfg_attr(
     all(feature = "nightly", any(target_arch = "x86", target_arch = "x86_64")),
-    feature(stdarch_x86_avx512, avx512_target_feature)
+    feature(stdarch_x86_avx512)
 )]
 #![cfg_attr(
     all(feature = "nightly", target_arch = "arm"),
@@ -277,7 +279,7 @@ impl Adler32 {
     /// ```rust
     /// use simd_adler32::Adler32;
     ///
-    /// let mut adler = Adler32::from_checksum(0xDEADBEAF);
+    /// let mut adler = Adler32::from_checksum(0xDEAD_BEAF);
     /// ```
     #[must_use]
     #[expect(clippy::cast_possible_truncation, reason = "Intended.")]
@@ -344,9 +346,9 @@ pub fn adler32<H: Adler32Hash>(hash: &H) -> u32 { hash.hash() }
 #[cfg(test)]
 mod tests {
     #[test]
-    fn test_from_checksum() {
+    fn from_checksum_works() {
         let buf = b"rust is pretty cool man";
-        let sum = 0xDEADBEAF;
+        let sum = 0xDEAD_BEAF;
 
         let mut simd = super::Adler32::from_checksum(sum);
         let mut adler = adler::Adler32::from_checksum(sum);
@@ -354,9 +356,9 @@ mod tests {
         simd.write(buf);
         adler.write_slice(buf);
 
-        let simd = simd.finish();
+        let simd_f = simd.finish();
         let scalar = adler.checksum();
 
-        assert_eq!(simd, scalar);
+        assert_eq!(simd_f, scalar);
     }
 }

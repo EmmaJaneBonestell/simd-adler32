@@ -38,42 +38,42 @@ mod tests {
     #[test]
     fn zeroes() {
         assert_eq!(adler32(&[]), 1);
-        assert_eq!(adler32(&[0]), 1 | 1 << 16);
-        assert_eq!(adler32(&[0, 0]), 1 | 2 << 16);
-        assert_eq!(adler32(&[0; 100]), 0x00640001);
-        assert_eq!(adler32(&[0; 1024]), 0x04000001);
-        assert_eq!(adler32(&[0; 1024 * 1024]), 0x00F00001);
+        assert_eq!(adler32(&[0]), 1 | (1 << 16_i32));
+        assert_eq!(adler32(&[0, 0]), 1 | (2 << 16_i32));
+        assert_eq!(adler32(&[0; 100]), 0x0064_0001);
+        assert_eq!(adler32(&[0; 1024]), 0x0400_0001);
+        assert_eq!(adler32(&[0; 1024 * 1024]), 0x00F0_0001);
     }
 
     #[test]
     fn ones() {
-        assert_eq!(adler32(&[0xFF; 1024]), 0x79A6FC2E);
+        assert_eq!(adler32(&[0xFF; 1024]), 0x79A6_FC2E);
         assert_eq!(
             adler32(&[0xFF; 1024 * 1024]),
-            0x8E88EF11
+            0x8E88_EF11
         );
     }
 
     #[test]
     fn mixed() {
-        assert_eq!(adler32(&[1]), 2 | 2 << 16);
-        assert_eq!(adler32(&[40]), 41 | 41 << 16);
+        assert_eq!(adler32(&[1]), 2 | (2 << 16_i32));
+        assert_eq!(adler32(&[40]), 41 | (41 << 16_i32));
 
         assert_eq!(
             adler32(&[0xA5; 1024 * 1024]),
-            0xD5009AB1
+            0xD500_9AB1
         );
     }
 
-    /// Example calculation from https://en.wikipedia.org/wiki/Adler-32.
+    /// Example calculation from <https://en.wikipedia.org/wiki/Adler-32>.
     #[test]
     fn wiki() {
-        assert_eq!(adler32(b"Wikipedia"), 0x11E60398);
+        assert_eq!(adler32(b"Wikipedia"), 0x11E6_0398);
     }
 
     fn adler32(data: &[u8]) -> u32 {
         let (a, b) = super::update(1, 0, data);
 
-        u32::from(b) << 16 | u32::from(a)
+        (u32::from(b) << 16_i32) | u32::from(a)
     }
 }
